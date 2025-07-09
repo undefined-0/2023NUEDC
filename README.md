@@ -32,3 +32,8 @@
   * PB8 - Length
 
   * PB9 - Load
+
+
+* 1MHz激励信号输出
+
+  * PA8（TIM1-Channel1）

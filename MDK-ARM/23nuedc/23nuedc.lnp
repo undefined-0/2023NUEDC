@@ -3,6 +3,7 @@
 "23nuedc\main.o"
 "23nuedc\gpio.o"
 "23nuedc\i2c.o"
+"23nuedc\tim.o"
 "23nuedc\usart.o"
 "23nuedc\stm32f1xx_it.o"
 "23nuedc\stm32f1xx_hal_msp.o"
