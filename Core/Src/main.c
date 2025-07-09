@@ -126,7 +126,7 @@ int main(void)
   while (1)
   {
     /* 检查 PA3 是否被拉低 */
-    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == GPIO_PIN_RESET)
+    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
     {
         HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
 		OLED_ShowString(0,4,"Length:",16, 0);    //正相显示8X16字符串
@@ -134,7 +134,7 @@ int main(void)
     }
 
     /* 检查 PA4 是否被拉低 */
-    if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) == GPIO_PIN_RESET)
+    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
     {
         HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
 		OLED_ShowString(0,6,"Load:",16,0);//正相显示6X8字符串
