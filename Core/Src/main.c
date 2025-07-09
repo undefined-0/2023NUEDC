@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
@@ -27,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "oled.h"
 #include "stdio.h" // 为了在send_length_x_as_binary_and_decimal()函数中调用sprintf()
+#include "string.h" // 为了在串口发送时能使用strlen()
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +63,20 @@ const uint16_t pins[8] =
     GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3,
     GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7
 };
+
+// 通过串联分压原理来计算待测负载
+// GND---待测负载---B---50Ω---A---STM32
+//                 ^         ^ 
+//                 |         | 
+//                 v2        v1 
+uint16_t adc_values[2]; // 用于DMA接收ADC值
+// uint8_t adc_value = 0; // ADC输出的原始值（0~4095）
+// float v1 = 0.0;
+// float v2 = 0.0;
+
+// 用于串口发送ADC值
+uint8_t message[15] = "";
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -132,6 +149,7 @@ void send_length_x_as_binary_and_decimal(UART_HandleTypeDef *huart, uint8_t u8da
     HAL_UART_Transmit(huart, (uint8_t*)tx_buffer, index, HAL_MAX_DELAY);
 }
 
+
 /* USER CODE END 0 */
 
 /**
@@ -163,11 +181,21 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);// 开启PWM输出（1MHz，占空比50%）
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1); // 开启PWM输出（1MHz，占空比50%）
+  HAL_ADCEx_Calibration_Start(&hadc1); // 校准ADC
+
+  HAL_ADC_Start_DMA(&hadc1,(uint32_t*)adc_values,sizeof(adc_values)/sizeof(uint16_t));
+  // 触发ADC采样与转换，且用DMA搬运。搬运到的内存地址是adc_values数组名，
+  // 搬运次数为sizeof(adc_values)/sizeof(uint16_t)=2次（因为是两个通道。也可以直接填2）。
+  // 因配置了连续转换模式，只需要触发一次，故写在while(1)循环外。
+
+  HAL_ADC_PollForConversion(&hadc1,HAL_MAX_DELAY); // 轮询检查转换是否完成，转换完成后再读取测量结果，以免读到默认值。
 
   OLED_Init();                           // OLED初始化
   OLED_Clear();                          // 清屏
@@ -204,11 +232,17 @@ int main(void)
   while (1)
   {
     HAL_Delay(100);
-    length_x = read_8_io();
-    //HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY); // 原生串口发送，只能正常查看16进制数，不直观，不采用
-    send_length_x_as_binary_and_decimal(&huart1, length_x);
-    sprintf((char*)length_x_buffer, "Length: %d", length_x); // 将length_x转换为字符串形式，存入数组length_x_buffer[]，为在屏幕上显示做准备
-    OLED_ShowString(0, 4, length_x_buffer, 16, 0);
+    sprintf(message,"%d %d",adc_values[0],adc_values[1]); // 将PB0、PB1采到的数据写入数组message，用于串口发送
+    HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
+    
+    
+    // length_x = read_8_io();
+    // //HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY); // 原生串口发送，只能正常查看16进制数，不直观，不采用
+    // send_length_x_as_binary_and_decimal(&huart1, length_x);
+    // sprintf((char*)length_x_buffer, "Length: %d", length_x); // 将length_x转换为字符串形式，存入数组length_x_buffer[]，为在屏幕上显示做准备
+    // OLED_ShowString(0, 4, length_x_buffer, 16, 0);
+
+
     // /* 检查 PA3 是否被拉低 */
     // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
     // {
@@ -240,6 +274,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -266,6 +301,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }

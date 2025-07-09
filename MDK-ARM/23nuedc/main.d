@@ -22,6 +22,8 @@
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma_ex.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
+23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h
+23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc_ex.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h
@@ -29,6 +31,8 @@
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 23nuedc\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+23nuedc\main.o: ../Core/Inc/adc.h
+23nuedc\main.o: ../Core/Inc/dma.h
 23nuedc\main.o: ../Core/Inc/i2c.h
 23nuedc\main.o: ../Core/Inc/tim.h
 23nuedc\main.o: ../Core/Inc/usart.h
@@ -36,3 +40,4 @@
 23nuedc\main.o: ../bsp/oled.h
 23nuedc\main.o: ../bsp/oledfont.h
 23nuedc\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+23nuedc\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h

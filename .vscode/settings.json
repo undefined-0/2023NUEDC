@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "oled.h": "c"
+        "oled.h": "c",
+        "system_stm32f1xx.h": "c",
+        "stdio.h": "c",
+        "cstdint": "cpp"
     }
 }
