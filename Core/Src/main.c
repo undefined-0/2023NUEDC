@@ -48,10 +48,13 @@
 
 /* USER CODE BEGIN PV */
 
-// length_x：将PA0~PA7的电平状态合并为一个字节后的结果
+// length_x：将PA0~PA7的电平状态合并为一个字节后的结果。
 uint8_t length_x = 0; 
 
-// pins[8]：用来存放8个IO电平状态（来自FPGA）的数组
+// length_x_buffer[10]：字符串形式的length_x，为了在oled屏幕上显示。
+uint8_t length_x_buffer[10]; // 足够容纳 "255" + '\0'
+
+// pins[8]：用来存放8个IO电平状态（来自FPGA）的数组。
 const uint16_t pins[8] = 
 {
     GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3,
@@ -204,6 +207,8 @@ int main(void)
     length_x = read_8_io();
     //HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY); // 原生串口发送，只能正常查看16进制数，不直观，不采用
     send_length_x_as_binary_and_decimal(&huart1, length_x);
+    sprintf((char*)length_x_buffer, "Length: %d", length_x); // 将length_x转换为字符串形式，存入数组length_x_buffer[]，为在屏幕上显示做准备
+    OLED_ShowString(0, 4, length_x_buffer, 16, 0);
     // /* 检查 PA3 是否被拉低 */
     // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
     // {
