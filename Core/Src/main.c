@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "oled.h"
+#include "stdio.h" // 为了在send_length_x_as_binary_and_decimal()函数中调用sprintf()
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +48,15 @@
 
 /* USER CODE BEGIN PV */
 
+// length_x：将PA0~PA7的电平状态合并为一个字节后的结果
+uint8_t length_x = 0; 
+
+// pins[8]：用来存放8个IO电平状态（来自FPGA）的数组
+const uint16_t pins[8] = 
+{
+    GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3,
+    GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +67,67 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/**
+  * @brief  读取 PA0~PA7 的电平状态，合并为一个字节返回。
+  * PA7 是最高有效位（MSB）,PA0 是最低有效位（LSB）。
+  * 
+  * PA7 → bit7
+  * PA6 → bit6
+  * ...
+  * PA0 → bit0
+  * 
+  * 在 while 循环中调用length_x = read_8_io();
+  * 则length_x即为来自FPGA的计数结果。
+  * @retval uint8_t
+  */
+uint8_t read_8_io(void)
+{
+    uint8_t value = 0;
+    for (int i = 0; i < 8; i++) {
+        if (HAL_GPIO_ReadPin(GPIOA, pins[i]) == GPIO_PIN_SET) {
+            value |= (1 << i);  // 对应位设为1
+        }
+    }
+    return value;
+}
+
+/**
+  * @brief  将给定的字节数据以二进制和十进制字符串形式通过串口发送出去
+  *         该函数用于将 uint8_t 类型的 length_x 转换为直观的二进制表示和十进制数值，
+  *         并通过指定的 UART 接口发送。
+  * @param  huart：UART句柄指针，例如 &huart1
+  * @param  u8data：要发送的 uint8_t 类型数据（0~255）
+  * @retval 无
+  */
+void send_length_x_as_binary_and_decimal(UART_HandleTypeDef *huart, uint8_t u8data)
+{
+    char tx_buffer[30]; // 缓冲区大小（根据需要调整）
+    int index = 0;
+
+    // 添加二进制表示
+    index += sprintf(tx_buffer + index, "Bin(2): ");
+    for (int i = 7; i >= 0; i--) {
+        if (u8data & (1 << i)) {
+            tx_buffer[index++] = '1';
+        } else {
+            tx_buffer[index++] = '0';
+        }
+    }
+
+    // 添加分隔符
+    tx_buffer[index++] = '\r'; // 回车
+    tx_buffer[index++] = '\n'; // 换行
+
+    // 添加十进制表示
+    index += sprintf(tx_buffer + index, "Dec(10): %d\r\n", u8data);
+
+    // 每段数据发送完后空一行
+    tx_buffer[index++] = '\n';
+
+    // 发送数据
+    HAL_UART_Transmit(huart, (uint8_t*)tx_buffer, index, HAL_MAX_DELAY);
+}
 
 /* USER CODE END 0 */
 
@@ -129,22 +200,26 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* 检查 PA3 是否被拉低 */
-    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
-    {
-        HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
-		OLED_ShowString(0,4,"Length:",16, 0);    // 正相显示8X16字符串
-
-    }
-
-    /* 检查 PA4 是否被拉低 */
-    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
-    {
-        HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
-		OLED_ShowString(0,6,"Load:",16,0);// 正相显示6X8字符串
-    }
-
     HAL_Delay(100);
+    length_x = read_8_io();
+    //HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY); // 原生串口发送，只能正常查看16进制数，不直观，不采用
+    send_length_x_as_binary_and_decimal(&huart1, length_x);
+    // /* 检查 PA3 是否被拉低 */
+    // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
+    // {
+    //     HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
+		//     OLED_ShowString(0,4,"Length:",16, 0);    // 正相显示8X16字符串
+    //     length_x = read_8_io();
+    //     HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY);
+    // }
+
+    // /* 检查 PA4 是否被拉低 */
+    // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
+    // {
+    //     HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
+		//     OLED_ShowString(0,6,"Load:",16,0);// 正相显示6X8字符串
+    // }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
