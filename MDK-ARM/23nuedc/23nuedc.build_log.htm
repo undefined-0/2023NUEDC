@@ -22,21 +22,23 @@ Dialog DLL:      TCM.DLL V1.56.4.0
  
 <h2>Project:</h2>
 D:\A_Scholastic\33\2023NUEDC\MDK-ARM\23nuedc.uvprojx
-Project File Date:  07/09/2025
+Project File Date:  07/10/2025
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
 Build target '23nuedc'
 compiling main.c...
-../Core/Src/main.c(247): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
-      sprintf(message,"%d %d",adc_values[0],adc_values[1]); // 将PB0、PB1采到的数据写入数组message，用于串口发�?
-../Core/Src/main.c(248): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-      HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
-../Core/Src/main.c: 2 warnings, 0 errors
+../Core/Src/main.c(284): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+          sprintf(message, "High Avg: %.2f (%lu samples)\r\n", high_level_avg, high_sample_count);
+../Core/Src/main.c(288): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+          strcpy(message, "No high level samples detected.\r\n");
+../Core/Src/main.c(291): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+      HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+../Core/Src/main.c: 3 warnings, 0 errors
 linking...
-Program Size: Code=12284 RO-data=2384 RW-data=44 ZI-data=1996  
+Program Size: Code=17650 RO-data=2562 RW-data=52 ZI-data=4028  
 FromELF: creating hex file...
-"23nuedc\23nuedc.axf" - 0 Error(s), 2 Warning(s).
+"23nuedc\23nuedc.axf" - 0 Error(s), 3 Warning(s).
 
 <h2>Software Packages used:</h2>
 

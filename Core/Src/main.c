@@ -40,6 +40,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+// 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
+#define THRESHOLD 2048      // 假设高电平判定门限为 4096/2
+#define SAMPLE_BUFFER_SIZE 1000  // 缓冲区大小，根据可用内存调整
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -70,18 +74,40 @@ const uint16_t pins[8] =
 //                 |         | 
 //                 v2        v1 
 uint16_t adc_values[2]; // 用于DMA接收ADC值
-// uint8_t adc_value = 0; // ADC输出的原始值（0~4095）
-// float v1 = 0.0;
-// float v2 = 0.0;
+
+// 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
+uint16_t adc_high_level_samples[SAMPLE_BUFFER_SIZE]; // 存储高电平采样点
+uint32_t high_sample_count = 0; // 高电平采样点计数
+float high_level_avg = 0.0f; // 高电平采样点平均值
 
 // 用于串口发送ADC值
-uint8_t message[15] = "";
+uint8_t message[50] = "";
+
+// load：待测阻性负载的值
+float load = 0.0;
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+/**
+  * @brief  重写DMA传输完成中断回调函数，记录高电平方波值，记录高电平采样点数
+  * @param  hadc：句柄指针，例如 &huart1
+  * @retval 无
+  */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    // 处理 Channel 8（adc_values[0]）上的方波
+    if (adc_values[0] > THRESHOLD)
+    {
+        if (high_sample_count < SAMPLE_BUFFER_SIZE)
+        {
+            adc_high_level_samples[high_sample_count++] = adc_values[0];
+        }
+    }
+}
 
 /* USER CODE END PFP */
 
@@ -231,18 +257,56 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_Delay(100);
-    sprintf(message,"%d %d",adc_values[0],adc_values[1]); // 将PB0、PB1采到的数据写入数组message，用于串口发送
-    HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
+     /*-------------------------测电阻-------------------------*/
+    // HAL_Delay(100);
+    // if(adc_values[0]==adc_values[1])
+    //   load = 999; // 开路，负载无穷大
+    // else
+    //   load = adc_values[1]*50/(adc_values[0]-adc_values[1]);
+    // sprintf(message,"%d %d %.2f",adc_values[0],adc_values[1],load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
+    // HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
+    /*-------------------------测电阻-------------------------*/
     
+
+    /*-------------------------测电阻（方波平均版）-------------------------*/
+    HAL_Delay(100);  // 每 100ms 计算一次高电平平均值
+
+    if (high_sample_count > 0)
+    {
+        high_level_avg = 0.0f;
+        for (uint32_t i = 0; i < high_sample_count; i++)
+        {
+            high_level_avg += adc_high_level_samples[i];
+        }
+        high_level_avg /= high_sample_count;
+
+        // 显示结果
+        sprintf(message, "High Avg: %.2f (%lu samples)\r\n", high_level_avg, high_sample_count);
+    }
+    else
+    {
+        strcpy(message, "No high level samples detected.\r\n");
+    }
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+
+    // 清空缓冲区供下一轮使用
+    high_sample_count = 0;
+    /*-------------------------测电阻（方波平均版）-------------------------*/
     
+
+
+    /*-------------------------测IO读取-------------------------*/
     // length_x = read_8_io();
     // //HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY); // 原生串口发送，只能正常查看16进制数，不直观，不采用
     // send_length_x_as_binary_and_decimal(&huart1, length_x);
     // sprintf((char*)length_x_buffer, "Length: %d", length_x); // 将length_x转换为字符串形式，存入数组length_x_buffer[]，为在屏幕上显示做准备
     // OLED_ShowString(0, 4, length_x_buffer, 16, 0);
+    /*-------------------------测IO读取-------------------------*/
 
 
+
+    /*-------------------------测屏幕-------------------------*/
     // /* 检查 PA3 是否被拉低 */
     // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
     // {
@@ -258,6 +322,8 @@ int main(void)
     //     HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
 		//     OLED_ShowString(0,6,"Load:",16,0);// 正相显示6X8字符串
     // }
+    /*-------------------------测屏幕-------------------------*/
+
 
     /* USER CODE END WHILE */
 
