@@ -41,3 +41,4 @@
 23nuedc\main.o: ../bsp/oledfont.h
 23nuedc\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 23nuedc\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+23nuedc\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h

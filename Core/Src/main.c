@@ -30,6 +30,8 @@
 #include "oled.h"
 #include "stdio.h" // 为了在send_length_x_as_binary_and_decimal()函数中调用sprintf()
 #include "string.h" // 为了在串口发送时能使用strlen()
+#include "math.h" // 为了使用fabsf()函数（求浮点数的绝对值）
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -195,9 +197,9 @@ void send_length_x_as_binary_and_decimal(UART_HandleTypeDef *huart, uint8_t u8da
   * @param  message：用于存储输出信息的字符串缓冲区
   * @param  v_id：电压数组标识符，1 表示 adc_high_level_samples_1，
   *                              2 表示 adc_high_level_samples_2
-  * @retval 无
+  * @retval float类型的电压平均值
   */
-void calculate_and_display_high_level_avg(uint16_t *adc_high_level_samples, uint16_t high_sample_count, uint8_t *message, int v_id)
+float calculate_and_display_high_level_avg(uint16_t *adc_high_level_samples, uint16_t high_sample_count, uint8_t *message, int v_id)
 {
     if (high_sample_count > 0)
     {
@@ -213,10 +215,12 @@ void calculate_and_display_high_level_avg(uint16_t *adc_high_level_samples, uint
         
         // 格式化输出平均值和样本数量
         sprintf(message, "%s: %.2f (%lu samples)\n", prefix, high_level_avg, high_sample_count);
+        return high_level_avg;
     }
     else
     {
         strcpy(message, "No high level samples detected.\n");
+		return 0;
     }
 }
 
@@ -320,11 +324,17 @@ int main(void)
     /*-------------------------测电阻（方波平均版）-------------------------*/
     HAL_Delay(500);  // 每 500ms 计算一次高电平平均值
     // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
-    calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1);
-    HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-    calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2);
-    HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-
+    high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
+    //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+    high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
+    //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+    if(fabsf(high_level_avg_1 - high_level_avg_2) < 20.0f)
+      load = 999; // 开路，负载无穷大
+    else
+      load = high_level_avg_2*50.0/(high_level_avg_1-high_level_avg_2);
+    // sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
+    sprintf(message,"load: %.2f\n",load); // 将算出的负载值写入数组message，用于串口发送
+    HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
     // 清空缓冲区供下一轮使用
     high_sample_count_1 = 0;
     high_sample_count_2 = 0;
