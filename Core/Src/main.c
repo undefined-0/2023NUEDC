@@ -41,7 +41,8 @@
 /* USER CODE BEGIN PD */
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-#define THRESHOLD 2048      // 假设高电平判定门限为 4096/2
+#define THRESHOLD_1 2048      // 假设v1高电平判定门限为 4096/2
+#define THRESHOLD_2 300      // 假设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
 #define SAMPLE_BUFFER_SIZE 1000  // 缓冲区大小，根据可用内存调整
 
 /* USER CODE END PD */
@@ -76,9 +77,12 @@ const uint16_t pins[8] =
 uint16_t adc_values[2]; // 用于DMA接收ADC值
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-uint16_t adc_high_level_samples[SAMPLE_BUFFER_SIZE]; // 存储高电平采样点
-uint32_t high_sample_count = 0; // 高电平采样点计数
-float high_level_avg = 0.0f; // 高电平采样点平均值
+uint16_t adc_high_level_samples_1[SAMPLE_BUFFER_SIZE]; // 存储V1方波（A点，激励信号）高电平采样点
+uint16_t adc_high_level_samples_2[SAMPLE_BUFFER_SIZE]; // 存储V2方波（B点，分压后）高电平采样点
+uint16_t high_sample_count_1 = 0; // V1高电平采样点计数
+uint16_t high_sample_count_2 = 0; // V2高电平采样点计数
+float high_level_avg_1 = 0.0f; // V1高电平采样点平均值
+float high_level_avg_2 = 0.0f; // V2高电平采样点平均值
 
 // 用于串口发送ADC值
 uint8_t message[50] = "";
@@ -99,20 +103,25 @@ void SystemClock_Config(void);
   */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-    // 处理 Channel 8（adc_values[0]）上的方波
-    if (adc_values[0] > THRESHOLD)
+    // 处理 Channel 8（adc_values[0]）上的方波（A点，激励信号，V1）
+    if (adc_values[0] > THRESHOLD_1)
     {
-        if (high_sample_count < SAMPLE_BUFFER_SIZE)
+        if (high_sample_count_1 < SAMPLE_BUFFER_SIZE)
         {
-            adc_high_level_samples[high_sample_count++] = adc_values[0];
+            adc_high_level_samples_1[high_sample_count_1++] = adc_values[0];
+        }
+    }
+
+        // 处理 Channel 9（adc_values[1]）上的方波（B点，分压后，V2）
+    if (adc_values[1] > THRESHOLD_2)
+    {
+        if (high_sample_count_2 < SAMPLE_BUFFER_SIZE)
+        {
+            adc_high_level_samples_2[high_sample_count_2++] = adc_values[1];
         }
     }
 }
 
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
 
 /**
   * @brief  读取 PA0~PA7 的电平状态，合并为一个字节返回。
@@ -138,10 +147,11 @@ uint8_t read_8_io(void)
     return value;
 }
 
+
 /**
   * @brief  将给定的字节数据以二进制和十进制字符串形式通过串口发送出去
   *         该函数用于将 uint8_t 类型的 length_x 转换为直观的二进制表示和十进制数值，
-  *         并通过指定的 UART 接口发送。
+  *         并通过指定的 UART 发送。
   * @param  huart：UART句柄指针，例如 &huart1
   * @param  u8data：要发送的 uint8_t 类型数据（0~255）
   * @retval 无
@@ -175,6 +185,45 @@ void send_length_x_as_binary_and_decimal(UART_HandleTypeDef *huart, uint8_t u8da
     HAL_UART_Transmit(huart, (uint8_t*)tx_buffer, index, HAL_MAX_DELAY);
 }
 
+
+/**
+  * @brief  计算输入ADC的方波的高电平部分的平均值并写入用于串口发送的字符串
+  *         如果采样到了有效的高电平（即：有超过阈值的采样点），则计算其平均值；
+  *         否则输出“无高电平样本”的提示信息。
+  * @param  adc_high_level_samples：指向ADC高电平样本数组的指针
+  * @param  high_sample_count：高电平样本的数量
+  * @param  message：用于存储输出信息的字符串缓冲区
+  * @param  v_id：电压数组标识符，1 表示 adc_high_level_samples_1，
+  *                              2 表示 adc_high_level_samples_2
+  * @retval 无
+  */
+void calculate_and_display_high_level_avg(uint16_t *adc_high_level_samples, uint16_t high_sample_count, uint8_t *message, int v_id)
+{
+    if (high_sample_count > 0)
+    {
+        float high_level_avg = 0.0f;
+        for (uint16_t i = 0; i < high_sample_count; i++)
+        {
+            high_level_avg += adc_high_level_samples[i];
+        }
+        high_level_avg /= high_sample_count;
+
+        // 根据 v_id 决定前缀名称
+        const char *prefix = (v_id == 1) ? "V1 High Avg" : "V2 High Avg";
+        
+        // 格式化输出平均值和样本数量
+        sprintf(message, "%s: %.2f (%lu samples)\n", prefix, high_level_avg, high_sample_count);
+    }
+    else
+    {
+        strcpy(message, "No high level samples detected.\n");
+    }
+}
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
@@ -257,7 +306,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-     /*-------------------------测电阻-------------------------*/
+     /*-------------------------测电阻（直流检测版）-------------------------*/
     // HAL_Delay(100);
     // if(adc_values[0]==adc_values[1])
     //   load = 999; // 开路，负载无穷大
@@ -265,33 +314,20 @@ int main(void)
     //   load = adc_values[1]*50/(adc_values[0]-adc_values[1]);
     // sprintf(message,"%d %d %.2f",adc_values[0],adc_values[1],load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
     // HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
-    /*-------------------------测电阻-------------------------*/
-    
+    /*-------------------------测电阻（直流检测版）-------------------------*/
+
 
     /*-------------------------测电阻（方波平均版）-------------------------*/
-    HAL_Delay(100);  // 每 100ms 计算一次高电平平均值
-
-    if (high_sample_count > 0)
-    {
-        high_level_avg = 0.0f;
-        for (uint32_t i = 0; i < high_sample_count; i++)
-        {
-            high_level_avg += adc_high_level_samples[i];
-        }
-        high_level_avg /= high_sample_count;
-
-        // 显示结果
-        sprintf(message, "High Avg: %.2f (%lu samples)\r\n", high_level_avg, high_sample_count);
-    }
-    else
-    {
-        strcpy(message, "No high level samples detected.\r\n");
-    }
-
+    HAL_Delay(500);  // 每 500ms 计算一次高电平平均值
+    // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
+    calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1);
+    HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+    calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2);
     HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
 
     // 清空缓冲区供下一轮使用
-    high_sample_count = 0;
+    high_sample_count_1 = 0;
+    high_sample_count_2 = 0;
     /*-------------------------测电阻（方波平均版）-------------------------*/
     
 
