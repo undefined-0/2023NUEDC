@@ -45,7 +45,8 @@
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
 #define THRESHOLD_1 2048      // 假设v1高电平判定门限为 4096/2
 #define THRESHOLD_2 300      // 假设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
-#define SAMPLE_BUFFER_SIZE 1000  // 缓冲区大小，根据可用内存调整
+#define SAMPLE_BUFFER_SIZE 1000  // ADC对方波采样的缓冲区大小
+#define IO_DATA_SIZE 5000 // 接收来自FPGA的数据的缓冲区大小
 
 /* USER CODE END PD */
 
@@ -58,11 +59,19 @@
 
 /* USER CODE BEGIN PV */
 
-// length_x：将PA0~PA7的电平状态合并为一个字节后的结果。
+// length_x：将PA0~PA7的电平状态合并为一个字节后的结果，是原始计数数据。
+// length_y：对length_x通过换算关系处理后所得的电缆长度。
 uint8_t length_x = 0; 
+//float length_y = 0.0; 
+double length_y = 0; 
+double avg_length_x = 0.0;
+
 
 // length_x_buffer[10]：字符串形式的length_x，为了在oled屏幕上显示。
+// length_y_buffer[10]：字符串形式的length_y，为了在oled屏幕上显示。
 uint8_t length_x_buffer[10]; // 足够容纳 "255" + '\0'
+// float length_y_buffer[10];
+uint8_t length_y_buffer[10];
 
 // pins[8]：用来存放8个IO电平状态（来自FPGA）的数组。
 const uint16_t pins[8] = 
@@ -278,7 +287,7 @@ int main(void)
 
   OLED_Init();                           // OLED初始化
   OLED_Clear();                          // 清屏
-  OLED_ShowString(0,0,"start",16, 0);    // 正相显示8X16字符串
+  OLED_ShowString(0,0,"Waiting for detection",12, 0);    // 正相显示8X16字符串
 
  
 //  OLED_ShowCHinese(0,4,0,1); // 反相显示汉字“独”
@@ -310,6 +319,45 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+     /*-------------------------正式程序-------------------------*/
+    /* 检查Length键是否被按下（ PA8 是否被拉低 ）*/
+    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
+    {
+      HAL_Delay(55); // 硬件消抖在电路扩展后失效了，采用软件消抖
+      if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
+      {
+        HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
+		    OLED_ShowString(0,2,"Length:",16,0); // 正相显示8X16字符串
+        const uint16_t sample_count = 5000;
+        double sum_length_x = 0.0;
+        for (uint16_t i = 0; i < sample_count; i++)
+        {
+            sum_length_x += read_8_io();  // 累加每次的读数
+        }
+        avg_length_x = sum_length_x / sample_count;  // 求平均
+        length_y = avg_length_x/10.0; // 得到最终值
+        char length_y_buffer[32];
+        // 使用 %.2f 显示两位小数，避免输出过多位数
+        sprintf(length_y_buffer, "Length: %.2f", length_y); 
+        OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
+        
+      }
+    }
+
+    /* 检查Load键是否被按下（ PA9 是否被拉低 ）*/
+    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
+    {
+      HAL_Delay(55); // 硬件消抖在电路扩展后失效了，采用软件消抖
+      if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
+      {
+        HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
+		    OLED_ShowString(0,4,"Load:",16,0); // 正相显示6X8字符串
+      }
+    }
+
+
+     /*-------------------------正式程序-------------------------*/
+
      /*-------------------------测电阻（直流检测版）-------------------------*/
     // HAL_Delay(100);
     // if(adc_values[0]==adc_values[1])
@@ -322,22 +370,25 @@ int main(void)
 
 
     /*-------------------------测电阻（方波平均版）-------------------------*/
-    HAL_Delay(500);  // 每 500ms 计算一次高电平平均值
-    // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
-    high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
-    //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-    high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
-    //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-    if(fabsf(high_level_avg_1 - high_level_avg_2) < 20.0f)
-      load = 999; // 开路，负载无穷大
-    else
-      load = high_level_avg_2*50.0/(high_level_avg_1-high_level_avg_2);
-    // sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
-    sprintf(message,"load: %.2f\n",load); // 将算出的负载值写入数组message，用于串口发送
-    HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
-    // 清空缓冲区供下一轮使用
-    high_sample_count_1 = 0;
-    high_sample_count_2 = 0;
+    // HAL_Delay(500);  // 每 500ms 计算一次高电平平均值
+
+    // // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
+    // high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
+    // //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+    // high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
+    // //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+
+    // // 通过串联分压原理计算负载电阻
+    // if(fabsf(high_level_avg_1 - high_level_avg_2) < 20.0f)
+    //   load = 999; // 开路，负载无穷大
+    // else
+    //   load = high_level_avg_2*50.0/(high_level_avg_1-high_level_avg_2);
+    // // sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
+    // sprintf(message,"load: %.2f\n",load); // 将算出的负载值写入数组message，用于串口发送
+    // HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
+    // // 清空缓冲区供下一轮使用
+    // high_sample_count_1 = 0;
+    // high_sample_count_2 = 0;
     /*-------------------------测电阻（方波平均版）-------------------------*/
     
 
@@ -352,23 +403,23 @@ int main(void)
 
 
 
-    /*-------------------------测屏幕-------------------------*/
-    // /* 检查 PA3 是否被拉低 */
+    /*-------------------------测按键、屏幕-------------------------*/
+    // /* 检查Length键是否被按下（ PA8 是否被拉低 ）*/
     // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
     // {
     //     HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
 		//     OLED_ShowString(0,4,"Length:",16, 0);    // 正相显示8X16字符串
     //     length_x = read_8_io();
-    //     HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY);
+    //     // HAL_UART_Transmit(&huart1, &length_x, 1, HAL_MAX_DELAY); // 会输出16进制值，无法正常读取，不使用
     // }
 
-    // /* 检查 PA4 是否被拉低 */
+    // /* 检查Load键是否被按下（ PA9 是否被拉低 ）*/
     // if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
     // {
     //     HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
 		//     OLED_ShowString(0,6,"Load:",16,0);// 正相显示6X8字符串
     // }
-    /*-------------------------测屏幕-------------------------*/
+    /*-------------------------测按键、屏幕-------------------------*/
 
 
     /* USER CODE END WHILE */
