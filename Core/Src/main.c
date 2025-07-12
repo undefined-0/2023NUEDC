@@ -68,6 +68,7 @@ double length_y = 0.0;
 // avg_load_x：按下测负载按钮后对IO口读出的数据（按照逻辑是load_x，但并未设置此变量）所求的平均值。
 double avg_length_x = 0.0;
 double avg_load_x = 0.0;
+uint8_t load_x = 0;  // 按下load按键后所读的io调试值。供串口输出用。
 
 // length_x_buffer[10]：字符串形式的length_x，为了在oled屏幕上显示。
 // length_y_buffer[10]：字符串形式的length_y，为了在oled屏幕上显示。
@@ -323,6 +324,7 @@ int main(void)
     // 可能因为没延时所以加上这两句之后按下按键就会跑飞，暂不用
     // length_x = read_8_io();
     // send_length_x_as_binary_and_decimal(&huart1, length_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
+
     /*-------------------------正式程序-------------------------*/
 
     /* 检查Length键是否被按下（ PA8 是否被拉低 ）*/
@@ -341,9 +343,9 @@ int main(void)
                 sum_length_x += read_8_io();  // 累加每次的读数
             }
             avg_length_x = sum_length_x / sample_count;  // 求平均
-            length_y = avg_length_x/10.0; // 计算得电缆长度值
+            length_y = avg_length_x*0.0922-1.0586; // 计算得电缆长度值
             uint8_t length_y_buffer[32];
-            sprintf(length_y_buffer, "Length: %.2f", length_y); 
+            sprintf(length_y_buffer, "Length: %.4fm", length_y); 
             OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
         }
     }
@@ -373,7 +375,7 @@ int main(void)
             // 比较 avg_length_x 和 avg_load_x 的差值
             double diff = fabs(avg_length_x - avg_load_x);
 
-            if (diff < 20) // 若按下length按键和load按键时读取到的IO口数据几乎相同（时间差几乎相同），则判断负载为电阻
+            if (diff < 0) // 若按下length按键和load按键时读取到的IO口数据几乎相同（时间差几乎相同），则判断负载为电阻
             {
                 // 进入电阻值计算逻辑
                 // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
@@ -396,15 +398,20 @@ int main(void)
                 // 清空缓冲区供下一轮使用
                 high_sample_count_1 = 0;
                 high_sample_count_2 = 0;
-                sprintf(load_y_buffer, "Load: R: %.2f",load);
+                sprintf(load_y_buffer, "Load:R: %.4f",load);
                 OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示电阻值于OLED屏幕第6行
             }
             else // 若按下length按键和load按键时读取到的IO口数据不同（时间差不同），则判断负载为电容
             {
+                /*-----------调试用-----------*/
+                load_x = read_8_io();
+                send_length_x_as_binary_and_decimal(&huart1, load_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
+                /*-----------调试用-----------*/
+                length_x = read_8_io();
                 // 进入电容值计算逻辑
                 double cap_diff = diff; // 差值用于电容计算
                 // uint8_t diff_buffer[32];
-                sprintf(load_y_buffer, "Load: C: %.2f", cap_diff);
+                sprintf(load_y_buffer, "Load:C: %.2f", (cap_diff*15-23.3));
                 OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示差值于OLED屏幕第6行
             }
         }
