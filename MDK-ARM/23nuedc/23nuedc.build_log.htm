@@ -28,43 +28,43 @@ Project File Date:  07/10/2025
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
 Build target '23nuedc'
 compiling main.c...
-../Core/Src/main.c(178): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(180): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
       index += sprintf(tx_buffer + index, "Bin(2): ");
-../Core/Src/main.c(192): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(194): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
       index += sprintf(tx_buffer + index, "Dec(10): %d\r\n", u8data);
-../Core/Src/main.c(225): warning:  #144-D: a value of type "char *" cannot be used to initialize an entity of type "const uint8_t *"
+../Core/Src/main.c(227): warning:  #144-D: a value of type "char *" cannot be used to initialize an entity of type "const uint8_t *"
           const uint8_t *prefix = (v_id == 1) ? "V1 High Avg" : "V2 High Avg";
-../Core/Src/main.c(228): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(230): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
           sprintf(message, "%s: %.2f (%lu samples)\n", prefix, high_level_avg, high_sample_count);
-../Core/Src/main.c(233): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(235): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
           strcpy(message, "No high level samples detected.\n");
-../Core/Src/main.c(348): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(353): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
               sprintf(length_y_buffer, "Length: %.4fm", length_y); 
-../Core/Src/main.c(349): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+../Core/Src/main.c(354): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
               OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
-../Core/Src/main.c(379): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(384): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(381): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(386): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(390): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(395): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(392): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(397): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(402): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(407): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
                   sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发�?
-../Core/Src/main.c(404): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(409): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
-../Core/Src/main.c(409): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(414): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
                   sprintf(load_y_buffer, "Load:R: %.4f",load);
-../Core/Src/main.c(410): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+../Core/Src/main.c(415): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
                   OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示电阻值于OLED屏幕�?6�?
-../Core/Src/main.c(422): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(427): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
                   sprintf(load_y_buffer, "Load:C: %.2f", (cap_diff*9.8214+25.714));
-../Core/Src/main.c(423): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+../Core/Src/main.c(428): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
                   OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示差值于OLED屏幕�?6�?
 ../Core/Src/main.c: 17 warnings, 0 errors
 linking...
-Program Size: Code=21042 RO-data=2578 RW-data=88 ZI-data=6032  
+Program Size: Code=21058 RO-data=2578 RW-data=88 ZI-data=6032  
 FromELF: creating hex file...
 "23nuedc\23nuedc.axf" - 0 Error(s), 17 Warning(s).
 
@@ -90,7 +90,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE:5.6.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:02
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

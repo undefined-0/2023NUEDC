@@ -43,8 +43,8 @@
 /* USER CODE BEGIN PD */
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-#define THRESHOLD_1 800      // 假设v1高电平判定门限为 4096/2
-#define THRESHOLD_2 300      // 假设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
+#define THRESHOLD_1 800 // 设v1高电平判定门限为 800（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
+#define THRESHOLD_2 300 // 设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
 #define SAMPLE_BUFFER_SIZE 1000  // ADC对方波采样的缓冲区大小
 #define IO_DATA_SIZE 5000 // 接收来自FPGA的数据的缓冲区大小
 
@@ -59,20 +59,22 @@
 
 /* USER CODE BEGIN PV */
 
-// length_x：将PA0~PA7的电平状态合并为一个字节后的结果，是原始计数数据。
+// length_x：按下length按键后在IO口读出的数据。（是将PA0~PA7的电平状态合并为一个字节后的结果。是原始计数数据。）
 // length_y：对length_x通过换算关系处理后所得的电缆长度。
 uint8_t length_x = 0; 
 double length_y = 0.0; 
 
-// avg_length_x：原始计数数据length_x的平均值。
-// avg_load_x：按下测负载按钮后对IO口读出的数据（按照逻辑是load_x，但并未设置此变量）所求的平均值。
+// 按下load按键后在IO口读出的数据。供串口输出用。
+uint8_t load_x = 0;
+
+// avg_length_x：length_x（按下length按键后在IO口读出的数据）的平均值。
+// avg_load_x：load_x（按下load按键后在IO口读出的数据）的平均值。
 double avg_length_x = 0.0;
 double avg_load_x = 0.0;
-uint8_t load_x = 0;  // 按下load按键后所读的io调试值。供串口输出用。
 
 // length_x_buffer[10]：字符串形式的length_x，为了在oled屏幕上显示。
 // length_y_buffer[10]：字符串形式的length_y，为了在oled屏幕上显示。
-uint8_t length_x_buffer[10]; // 足够容纳 "255" + '\0'
+uint8_t length_x_buffer[10];
 uint8_t length_y_buffer[10];
 
 // pins[8]：用来存放8个IO电平状态（来自FPGA）的数组。
@@ -83,21 +85,21 @@ const uint16_t pins[8] =
 };
 
 // 通过串联分压原理来计算待测负载
-// GND---待测负载---B---50Ω---A---STM32
+// GND---待测负载---B---50Ω---A---比较器---STM32
 //                 ^         ^ 
 //                 |         | 
 //                 v2        v1 
-uint16_t adc_values[2]; // 用于DMA接收ADC值
+uint16_t adc_values[2]; // 用于DMA接收ADC值，因为使用两个通道故数组大小为2
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-uint16_t adc_high_level_samples_1[SAMPLE_BUFFER_SIZE]; // 存储V1方波（A点，激励信号）高电平采样点
-uint16_t adc_high_level_samples_2[SAMPLE_BUFFER_SIZE]; // 存储V2方波（B点，分压后）高电平采样点
+uint16_t adc_high_level_samples_1[SAMPLE_BUFFER_SIZE]; // 存储V1方波（A点，经过比较器后的激励信号）的高电平采样点
+uint16_t adc_high_level_samples_2[SAMPLE_BUFFER_SIZE]; // 存储V2方波（B点，分压后）的高电平采样点
 uint16_t high_sample_count_1 = 0; // V1高电平采样点计数
 uint16_t high_sample_count_2 = 0; // V2高电平采样点计数
 float high_level_avg_1 = 0.0f; // V1高电平采样点平均值
 float high_level_avg_2 = 0.0f; // V2高电平采样点平均值
 
-// 用于串口发送ADC值
+// 用于存储串口输出信息的字符串缓冲区数组
 uint8_t message[50] = "";
 
 // load：待测阻性负载的值
@@ -334,7 +336,9 @@ int main(void)
         if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
         {
             HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
-            // OLED_ShowString(0,2,"Length:",16,0); // 正相显示8X16字符串
+
+            length_x = read_8_io();
+            send_length_x_as_binary_and_decimal(&huart1, length_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
 
             const uint16_t sample_count = 5000;
             double sum_length_x = 0.0;
@@ -343,7 +347,7 @@ int main(void)
                 sum_length_x += read_8_io();  // 累加每次的读数
             }
             avg_length_x = sum_length_x / sample_count;  // 求平均
-            length_y = avg_length_x*0.0922-1.0586; // 计算得电缆长度值
+            length_y = avg_length_x*0.1028-1.0141; // 计算得电缆长度值
             uint8_t length_y_buffer[32];
             sprintf(length_y_buffer, "Length: %.4fm", length_y); 
             OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
@@ -357,7 +361,6 @@ int main(void)
         if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
         {
             HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
-            // OLED_ShowString(0,4,"Load:",16,0); // 正相显示6X8字符串
 
             const uint16_t sample_count = 5000;
             double sum_load_x = 0.0;
@@ -369,8 +372,6 @@ int main(void)
 
             // 显示 Load 平均值
             uint8_t load_y_buffer[32];
-            // sprintf(load_y_buffer, "Load: %.2f", avg_load_x); 
-            // OLED_ShowString(0, 4, (uint8_t*)load_y_buffer, 16, 0);
 
             // 比较 avg_length_x 和 avg_load_x 的差值
             double diff = fabs(avg_length_x - avg_load_x);
