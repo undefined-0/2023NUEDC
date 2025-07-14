@@ -43,7 +43,7 @@
 /* USER CODE BEGIN PD */
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-#define THRESHOLD_1 2048      // 假设v1高电平判定门限为 4096/2
+#define THRESHOLD_1 800      // 假设v1高电平判定门限为 4096/2
 #define THRESHOLD_2 300      // 假设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
 #define SAMPLE_BUFFER_SIZE 1000  // ADC对方波采样的缓冲区大小
 #define IO_DATA_SIZE 5000 // 接收来自FPGA的数据的缓冲区大小
@@ -375,21 +375,29 @@ int main(void)
             // 比较 avg_length_x 和 avg_load_x 的差值
             double diff = fabs(avg_length_x - avg_load_x);
 
-            if (diff < 0) // 若按下length按键和load按键时读取到的IO口数据几乎相同（时间差几乎相同），则判断负载为电阻
+            high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+                high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+
+            if (high_level_avg_1 < 2500) // 若按下length按键和load按键时读取到的IO口数据几乎相同（时间差几乎相同），则判断负载为电阻
             {
                 // 进入电阻值计算逻辑
                 // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
                 send_length_x_as_binary_and_decimal(&huart1, length_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
+
                 high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
-                //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
                 high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
-                //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
 
                 // 通过串联分压原理计算负载电阻
                 if(fabsf(high_level_avg_1 - high_level_avg_2) < 20.0f)
                   load = 999; // 开路，负载无穷大
                 else
                   load = high_level_avg_2*50.0/(high_level_avg_1-high_level_avg_2);
+                  load = load*0.9005-0.5152;
+                  // load = load*load*0.015+load*0.2777+4.8421;
 
                 sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
                 // sprintf(message,"load: %.2f\n",load); // 将算出的负载值写入数组message，用于串口发送
@@ -411,8 +419,10 @@ int main(void)
                 // 进入电容值计算逻辑
                 double cap_diff = diff; // 差值用于电容计算
                 // uint8_t diff_buffer[32];
-                sprintf(load_y_buffer, "Load:C: %.2f", (cap_diff*15-23.3));
+                sprintf(load_y_buffer, "Load:C: %.2f", (cap_diff*9.8214+25.714));
                 OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示差值于OLED屏幕第6行
+                    high_sample_count_1 = 0;
+    high_sample_count_2 = 0;
             }
         }
     }

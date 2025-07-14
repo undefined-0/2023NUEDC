@@ -38,15 +38,35 @@ compiling main.c...
           sprintf(message, "%s: %.2f (%lu samples)\n", prefix, high_level_avg, high_sample_count);
 ../Core/Src/main.c(233): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
           strcpy(message, "No high level samples detected.\n");
-../Core/Src/main.c(448): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
-      sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发�?
-../Core/Src/main.c(450): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
-      HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
-../Core/Src/main.c: 7 warnings, 0 errors
+../Core/Src/main.c(348): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+              sprintf(length_y_buffer, "Length: %.4fm", length_y); 
+../Core/Src/main.c(349): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+              OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
+../Core/Src/main.c(379): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                  HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+../Core/Src/main.c(381): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                  HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+../Core/Src/main.c(390): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                  HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+../Core/Src/main.c(392): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                  HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+../Core/Src/main.c(402): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+                  sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发�?
+../Core/Src/main.c(404): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+                  HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
+../Core/Src/main.c(409): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+                  sprintf(load_y_buffer, "Load:R: %.4f",load);
+../Core/Src/main.c(410): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+                  OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示电阻值于OLED屏幕�?6�?
+../Core/Src/main.c(422): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+                  sprintf(load_y_buffer, "Load:C: %.2f", (cap_diff*9.8214+25.714));
+../Core/Src/main.c(423): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+                  OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示差值于OLED屏幕�?6�?
+../Core/Src/main.c: 17 warnings, 0 errors
 linking...
-Program Size: Code=19334 RO-data=2562 RW-data=60 ZI-data=6028  
+Program Size: Code=21042 RO-data=2578 RW-data=88 ZI-data=6032  
 FromELF: creating hex file...
-"23nuedc\23nuedc.axf" - 0 Error(s), 7 Warning(s).
+"23nuedc\23nuedc.axf" - 0 Error(s), 17 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -70,7 +90,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE:5.6.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>
