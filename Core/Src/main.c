@@ -43,10 +43,10 @@
 /* USER CODE BEGIN PD */
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-#define THRESHOLD_1 2048      // 假设v1高电平判定门限为 4096/2
-#define THRESHOLD_2 300      // 假设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
+#define THRESHOLD_1 800 // 设v1高电平判定门限为 800（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
+#define THRESHOLD_2 300 // 设v2高电平判定门限为 300（负载电阻较小，分压少，高电平在0.5V-2V之间，故阈值尽量压低）
 #define SAMPLE_BUFFER_SIZE 1000  // ADC对方波采样的缓冲区大小
-#define IO_DATA_SIZE 5000 // 接收来自FPGA的数据的缓冲区大小
+// #define IO_DATA_SIZE 5000 // 接收来自FPGA的数据的缓冲区大小
 
 /* USER CODE END PD */
 
@@ -59,19 +59,22 @@
 
 /* USER CODE BEGIN PV */
 
-// length_x：将PA0~PA7的电平状态合并为一个字节后的结果，是原始计数数据。
+// length_x：按下length按键后在IO口读出的数据。（是将PA0~PA7的电平状态合并为一个字节后的结果。是原始计数数据。）
 // length_y：对length_x通过换算关系处理后所得的电缆长度。
 uint8_t length_x = 0; 
 double length_y = 0.0; 
 
-// avg_length_x：原始计数数据length_x的平均值。
-// avg_load_x：按下测负载按钮后对IO口读出的数据（按照逻辑是load_x，但并未设置此变量）所求的平均值。
+// 按下load按键后在IO口读出的数据。供串口输出用。
+uint8_t load_x = 0;
+
+// avg_length_x：length_x（按下length按键后在IO口读出的数据）的平均值。
+// avg_load_x：load_x（按下load按键后在IO口读出的数据）的平均值。
 double avg_length_x = 0.0;
 double avg_load_x = 0.0;
 
 // length_x_buffer[10]：字符串形式的length_x，为了在oled屏幕上显示。
 // length_y_buffer[10]：字符串形式的length_y，为了在oled屏幕上显示。
-uint8_t length_x_buffer[10]; // 足够容纳 "255" + '\0'
+uint8_t length_x_buffer[10];
 uint8_t length_y_buffer[10];
 
 // pins[8]：用来存放8个IO电平状态（来自FPGA）的数组。
@@ -82,21 +85,21 @@ const uint16_t pins[8] =
 };
 
 // 通过串联分压原理来计算待测负载
-// GND---待测负载---B---50Ω---A---STM32
+// GND---待测负载---B---50Ω---A---比较器---STM32
 //                 ^         ^ 
 //                 |         | 
 //                 v2        v1 
-uint16_t adc_values[2]; // 用于DMA接收ADC值
+uint16_t adc_values[2]; // 用于DMA接收ADC值，因为使用两个通道故数组大小为2
 
 // 用于“对激励方波进行采样，然后只取高电平的部分（电压大于某个门限）做平均”
-uint16_t adc_high_level_samples_1[SAMPLE_BUFFER_SIZE]; // 存储V1方波（A点，激励信号）高电平采样点
-uint16_t adc_high_level_samples_2[SAMPLE_BUFFER_SIZE]; // 存储V2方波（B点，分压后）高电平采样点
+uint16_t adc_high_level_samples_1[SAMPLE_BUFFER_SIZE]; // 存储V1方波（A点，经过比较器后的激励信号）的高电平采样点
+uint16_t adc_high_level_samples_2[SAMPLE_BUFFER_SIZE]; // 存储V2方波（B点，分压后）的高电平采样点
 uint16_t high_sample_count_1 = 0; // V1高电平采样点计数
 uint16_t high_sample_count_2 = 0; // V2高电平采样点计数
 float high_level_avg_1 = 0.0f; // V1高电平采样点平均值
 float high_level_avg_2 = 0.0f; // V2高电平采样点平均值
 
-// 用于串口发送ADC值
+// 用于存储串口输出信息的字符串缓冲区数组
 uint8_t message[50] = "";
 
 // load：待测阻性负载的值
@@ -323,6 +326,7 @@ int main(void)
     // 可能因为没延时所以加上这两句之后按下按键就会跑飞，暂不用
     // length_x = read_8_io();
     // send_length_x_as_binary_and_decimal(&huart1, length_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
+
     /*-------------------------正式程序-------------------------*/
 
     /* 检查Length键是否被按下（ PA8 是否被拉低 ）*/
@@ -332,7 +336,9 @@ int main(void)
         if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET)
         {
             HAL_UART_Transmit(&huart1, (uint8_t*)"Length\r\n", 7, HAL_MAX_DELAY);
-            // OLED_ShowString(0,2,"Length:",16,0); // 正相显示8X16字符串
+
+            length_x = read_8_io();
+            send_length_x_as_binary_and_decimal(&huart1, length_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
 
             const uint16_t sample_count = 5000;
             double sum_length_x = 0.0;
@@ -341,9 +347,9 @@ int main(void)
                 sum_length_x += read_8_io();  // 累加每次的读数
             }
             avg_length_x = sum_length_x / sample_count;  // 求平均
-            length_y = avg_length_x/10.0; // 计算得电缆长度值
+            length_y = avg_length_x*0.1033-1.1627; // 计算得电缆长度值
             uint8_t length_y_buffer[32];
-            sprintf(length_y_buffer, "Length: %.2f", length_y); 
+            sprintf(length_y_buffer, "Length: %.4fm", length_y); 
             OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
         }
     }
@@ -355,7 +361,6 @@ int main(void)
         if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET)
         {
             HAL_UART_Transmit(&huart1, (uint8_t*)"Load\r\n", 5, HAL_MAX_DELAY);
-            // OLED_ShowString(0,4,"Load:",16,0); // 正相显示6X8字符串
 
             const uint16_t sample_count = 5000;
             double sum_load_x = 0.0;
@@ -367,27 +372,36 @@ int main(void)
 
             // 显示 Load 平均值
             uint8_t load_y_buffer[32];
-            // sprintf(load_y_buffer, "Load: %.2f", avg_load_x); 
-            // OLED_ShowString(0, 4, (uint8_t*)load_y_buffer, 16, 0);
 
             // 比较 avg_length_x 和 avg_load_x 的差值
             double diff = fabs(avg_length_x - avg_load_x);
 
-            if (diff < 20) // 若按下length按键和load按键时读取到的IO口数据几乎相同（时间差几乎相同），则判断负载为电阻
+            high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+                high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+
+            if (high_level_avg_1 < 2500) // 若按下load按键时v1有明显的拉低（空载/接入电容时实测应为4000+），则判断负载为电阻
             {
                 // 进入电阻值计算逻辑
                 // 计算输入ADC的V1、V2方波的高电平部分的平均值并通过串口输出
+                length_x = read_8_io();
                 send_length_x_as_binary_and_decimal(&huart1, length_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
+
                 high_level_avg_1 = calculate_and_display_high_level_avg(adc_high_level_samples_1, high_sample_count_1, message, 1); // V1高电平采样点平均值
-                //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
                 high_level_avg_2 = calculate_and_display_high_level_avg(adc_high_level_samples_2, high_sample_count_2, message, 2); // V2高电平采样点平均值
-                //HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
+                HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
 
                 // 通过串联分压原理计算负载电阻
                 if(fabsf(high_level_avg_1 - high_level_avg_2) < 20.0f)
                   load = 999; // 开路，负载无穷大
                 else
                   load = high_level_avg_2*50.0/(high_level_avg_1-high_level_avg_2);
+                  load = load*0.9005-0.5152;
+                  // load = load*1.1105-1.4221;
+                  
+                  // load = load*load*0.015+load*0.2777+4.8421;
 
                 sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发送
                 // sprintf(message,"load: %.2f\n",load); // 将算出的负载值写入数组message，用于串口发送
@@ -396,16 +410,31 @@ int main(void)
                 // 清空缓冲区供下一轮使用
                 high_sample_count_1 = 0;
                 high_sample_count_2 = 0;
-                sprintf(load_y_buffer, "Load: R: %.2f",load);
+                sprintf(load_y_buffer, "Load:R: %.4f",load);
                 OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示电阻值于OLED屏幕第6行
             }
             else // 若按下length按键和load按键时读取到的IO口数据不同（时间差不同），则判断负载为电容
             {
+                /*-----------调试用-----------*/
+                load_x = read_8_io();
+                send_length_x_as_binary_and_decimal(&huart1, load_x); // 调试中通过串口查看PA0~PA7每一位的具体情况
+                /*-----------调试用-----------*/
+                length_x = read_8_io();
                 // 进入电容值计算逻辑
                 double cap_diff = diff; // 差值用于电容计算
                 // uint8_t diff_buffer[32];
-                sprintf(load_y_buffer, "Load: C: %.2f", cap_diff);
+                // cap_diff = cap_diff*9.8214+25.714;
+                //cap_diff = cap_diff*9.8214+25.714;
+                                if(cap_diff<10)
+                {
+                cap_diff = -0.1673 * cap_diff * cap_diff + 10.487 * cap_diff - 22.27+37;
+                }
+                else{cap_diff = -0.1673 * cap_diff * cap_diff + 10.487 * cap_diff - 22.27+77;}
+                
+                sprintf(load_y_buffer, "Load:C: %.2f", cap_diff);
                 OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示差值于OLED屏幕第6行
+                    high_sample_count_1 = 0;
+    high_sample_count_2 = 0;
             }
         }
     }
