@@ -38,33 +38,33 @@ compiling main.c...
           sprintf(message, "%s: %.2f (%lu samples)\n", prefix, high_level_avg, high_sample_count);
 ../Core/Src/main.c(235): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
           strcpy(message, "No high level samples detected.\n");
-../Core/Src/main.c(353): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(352): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
               sprintf(length_y_buffer, "Length: %.4fm", length_y); 
-../Core/Src/main.c(354): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+../Core/Src/main.c(353): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
               OLED_ShowString(0, 2, (uint8_t*)length_y_buffer, 16, 0);
-../Core/Src/main.c(384): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(380): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(386): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(382): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(395): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(392): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(397): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(394): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), HAL_MAX_DELAY);
-../Core/Src/main.c(407): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(406): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
                   sprintf(message,"V1: %.2f V2: %.2f load: %.2f\n",high_level_avg_1,high_level_avg_2,load); // 将PB0、PB1采到的数据及算出的负载值写入数组message，用于串口发�?
-../Core/Src/main.c(409): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
+../Core/Src/main.c(408): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "const char *"
                   HAL_UART_Transmit(&huart1,(uint8_t*)message,strlen(message),HAL_MAX_DELAY);
-../Core/Src/main.c(414): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+../Core/Src/main.c(413): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
                   sprintf(load_y_buffer, "Load:R: %.4f",load);
-../Core/Src/main.c(415): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+../Core/Src/main.c(414): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
                   OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示电阻值于OLED屏幕�?6�?
-../Core/Src/main.c(427): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
-                  sprintf(load_y_buffer, "Load:C: %.2f", (cap_diff*9.8214+25.714));
-../Core/Src/main.c(428): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
+../Core/Src/main.c(434): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *restrict"
+                  sprintf(load_y_buffer, "Load:C: %.2f", cap_diff);
+../Core/Src/main.c(435): warning:  #167-D: argument of type "uint8_t *" is incompatible with parameter of type "char *"
                   OLED_ShowString(0, 6, (uint8_t*)load_y_buffer, 16, 0); // 显示差值于OLED屏幕�?6�?
 ../Core/Src/main.c: 17 warnings, 0 errors
 linking...
-Program Size: Code=21058 RO-data=2578 RW-data=88 ZI-data=6032  
+Program Size: Code=21334 RO-data=2578 RW-data=88 ZI-data=6032  
 FromELF: creating hex file...
 "23nuedc\23nuedc.axf" - 0 Error(s), 17 Warning(s).
 

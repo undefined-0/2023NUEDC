@@ -3,6 +3,8 @@
         "oled.h": "c",
         "system_stm32f1xx.h": "c",
         "stdio.h": "c",
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "math.h": "c",
+        "stdlib.h": "c"
     }
 }
