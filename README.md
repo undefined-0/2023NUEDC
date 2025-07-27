@@ -28,7 +28,7 @@
 
 ​	时序图如下。
 
-![时序图](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507151940528.png)
+![202507151940528](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507271626471.png)
 
 #### ② 问题
 
@@ -38,9 +38,17 @@ i. 测试发现，STM32的方波输出IO连接洞洞板上的负载时，测试�
 
 ii. 测试较短的电缆长度（如1m）时，两路下降沿的时间差过短，FPGA常会发生误判——计算相邻周期而非同一周期的两路下降沿间隔。
 
-针对上述两个问题，我们改进电路。让STM32输出的激励方波先经过一个比较器以维持电压，再经50Ω以模拟信号发生器。输入FPGA的两路信号由两路比较器的输出变为STM32经处理（经过比较器与50Ω）后的激励信号与一路比较器的输出。这样一来，两路信号的时间差被拉大，减小了FPGA误判的可能性。
+​	针对上述两个问题，我们改进电路。让STM32输出的激励方波先经过一个比较器以维持电压，再经50Ω以模拟信号发生器。输入FPGA的两路信号由 *两路比较器的输出* 变为 *STM32经处理（经过比较器与50Ω）后的激励信号* 与 *一路比较器的输出* 。这样一来，两路信号的时间差被拉大，减小了FPGA误判的可能性。
 
-改进后的系统框图如下：
+​	改进后的系统框图如下：
+
+![image-20250727222952471](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507272230478.png)
+
+​	洞洞板焊接实物照片：
+
+![IMG_20250727_223351](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507272238640.jpg)
+
+![IMG_20250727_223641](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507272238641.jpg)
 
 ### 2.同轴电缆终端负载测量
 
