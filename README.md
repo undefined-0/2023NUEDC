@@ -14,7 +14,7 @@
 
 ​	图为将方波输入电缆后产生的反射信号：阶梯波。其中，输入方波 $f = 250kHz$，低电平 $= 0V$ ，高电平 $= 3.3V$ 。由图可以看出，第一级阶梯波上升电压中点电压 $≈ 840mV$，第二级阶梯波上升电压中点电压 $≈ 2.6V$。
 
-<img src="README.assets/阶梯波示波器实拍图.png" alt="阶梯波示波器实拍图" style="zoom:50%;" />
+<img src="https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507290000083.png" alt="阶梯波示波器实拍图" style="zoom:50%;" />
 
 ​	我们使用STM32向同轴电缆输入连续方波信号，将所得反射信号（阶梯波）输入**同相输入端电压（电压阈值）分别设为两级阶梯上升电压中点**的TLV3501比较器，得到两路下降沿A、B。
 
@@ -38,11 +38,11 @@
 
 > 注：LMV358作为跟随器，其实可以去掉。图中最左侧的两个可变电阻器起分压作用，参数可调。本图中，输入LMV358的3脚和5脚的电压应分别调节为两级阶梯波上升电压中点。`输出下降沿A`、`输出下降沿B`将被输入FPGA。）
 
-![image-20250728235437166](README.assets/image-20250728235437166.png)
+![image-20250728235437166](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507290000085.png)
 
 ​	为模拟幅度范围为0-3.3V的阶梯波，信号发生器参数设置如下。
 
-<img src="README.assets/image-20250728225331930.png" alt="image-20250728225331930" style="zoom:67%;" />
+<img src="https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507290000086.png" alt="image-20250728225331930" style="zoom:67%;" />
 
 ##### ③ 仿真结果
 
@@ -50,11 +50,11 @@
 
 >注：仿真无法完全模拟实际中阶梯波的波形及幅度，由图可见仿真结果并不稳定。实物中，由于R7和R8的存在，大部分电压阈值附近的震荡已经被消除。
 
-![正确旧仿真结果图](README.assets/正确旧仿真结果图.png)
+![正确旧仿真结果图](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507290000087.png)
 
 ​	水平翻转后，选取较好的一段波形进行分析。如下：
 
-![正确旧仿真结果图（分析）](README.assets/正确旧仿真结果图（分析）.png)
+![正确旧仿真结果图（分析）](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507290000088.png)
 
 ##### ④ 时序图
 
@@ -84,7 +84,7 @@ ii. 测试较短的电缆长度（如1m）时，两路下降沿的时间差过�
 
 ​	改进后的仿真电路图如下。
 
-![image-20250728235334617](README.assets/image-20250728235334617.png)
+![image-20250728235334617](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507290000089.png)
 
 ##### ③ 仿真结果
 
@@ -92,11 +92,11 @@ ii. 测试较短的电缆长度（如1m）时，两路下降沿的时间差过�
 
 > 注：与旧电路同样地，仿真结果并不稳定，且仅模拟出了下降部分的阶梯。将下图水平翻转，即为上升部分的情况。
 
-![image-20250728234035553](README.assets/image-20250728234035553.png)
+![正确新仿真结果图3](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507301612550.png)
 
 ​	水平翻转后，选取较好的一段波形进行分析。如下：
 
-
+![正确新仿真结果图（分析）](https://raw.githubusercontent.com/undefined-0/image-store/main/PicGo/202507311030024.png)
 
 ​	洞洞板焊接实物照片：
 
